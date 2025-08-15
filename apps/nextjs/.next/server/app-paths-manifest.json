@@ -1,0 +1,16 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/clients/page": "app/admin/clients/page.js",
+  "/admin/create-client/page": "app/admin/create-client/page.js",
+  "/api/admin/clients/route": "app/api/admin/clients/route.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/health/route": "app/api/health/route.js",
+  "/api/images/route": "app/api/images/route.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/trpc/[trpc]/route": "app/api/trpc/[trpc]/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js",
+  "/login/page": "app/login/page.js",
+  "/api/images/upload/route": "app/api/images/upload/route.js"
+}

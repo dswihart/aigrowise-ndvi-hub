@@ -1,0 +1,154 @@
+########################################################################
+# RUN THESE COMMANDS ON dashboard.aigrowise.com SERVER
+# SSH to your server first: ssh root@dashboard.aigrowise.com
+########################################################################
+
+# 1. Find and navigate to your application directory
+find /var /opt /home -name "package.json" -path "*aigrowise*" 2>/dev/null | head -1
+cd $(find /var /opt /home -name "package.json" -path "*aigrowise*" 2>/dev/null | head -1 | xargs dirname)
+
+# OR try these common locations:
+# cd /var/www/aigrowise
+# cd /opt/aigrowise  
+# cd /root/aigrowise
+
+# 2. Check current status
+pwd
+ls -la
+pm2 status
+
+# 3. Fix database connection
+npx prisma generate
+npx prisma db push
+
+# 4. Create admin user (copy and paste this entire block)
+cat > create-admin-now.js << 'EOF'
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const prisma = new PrismaClient();
+
+async function createAdmin() {
+  try {
+    const adminEmail = 'admin@aigrowise.com';
+    const adminPassword = 'Admin123!';
+    
+    const existingAdmin = await prisma.user.findUnique({
+      where: { email: adminEmail }
+    });
+    
+    if (existingAdmin) {
+      console.log('✅ Admin user already exists:', adminEmail);
+      console.log('🔐 Use password: Admin123! to login');
+      return;
+    }
+    
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
+    const admin = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        password: hashedPassword,
+        role: 'ADMIN'
+      }
+    });
+    
+    console.log('✅ Admin user created successfully!');
+    console.log('📧 Email: admin@aigrowise.com');
+    console.log('🔐 Password: Admin123!');
+    console.log('🌐 Login at: https://dashboard.aigrowise.com/admin');
+    
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+createAdmin();
+EOF
+
+# Run the admin creation script
+node create-admin-now.js
+
+# 5. Fix the admin dashboard UI (copy and paste this entire block)
+cat > fix-dashboard-ui.js << 'EOF'
+const fs = require('fs');
+const path = require('path');
+
+// Fix the admin dashboard to show prominent client creation buttons
+const adminDashboardPath = 'apps/nextjs/app/admin/admin-dashboard.tsx';
+
+if (fs.existsSync(adminDashboardPath)) {
+  let content = fs.readFileSync(adminDashboardPath, 'utf8');
+  
+  // Check if client creation UI already exists
+  if (!content.includes('Create New Client')) {
+    // Add prominent client creation section after the header
+    const headerEnd = '</header>';
+    const clientCreationUI = `</header>
+
+      {/* PROMINENT CLIENT CREATION SECTION */}
+      <div className="bg-gradient-to-r from-blue-500 to-green-500 text-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-4">Client Management</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              <a 
+                href="/admin/create-client"
+                className="bg-white bg-opacity-20 hover:bg-opacity-30 backdrop-blur-sm rounded-xl p-8 text-center transition-all transform hover:scale-105 shadow-lg border border-white border-opacity-30"
+              >
+                <div className="text-6xl mb-4">👤</div>
+                <div className="text-2xl font-bold mb-2">Create New Client</div>
+                <div className="text-lg opacity-90">Add a new client account to the system</div>
+              </a>
+              
+              <a 
+                href="/admin/clients"
+                className="bg-white bg-opacity-20 hover:bg-opacity-30 backdrop-blur-sm rounded-xl p-8 text-center transition-all transform hover:scale-105 shadow-lg border border-white border-opacity-30"
+              >
+                <div className="text-6xl mb-4">👥</div>
+                <div className="text-2xl font-bold mb-2">Manage Clients</div>
+                <div className="text-lg opacity-90">View and manage all client accounts</div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    
+    content = content.replace(headerEnd, clientCreationUI);
+    fs.writeFileSync(adminDashboardPath, content);
+    console.log('✅ Added prominent client creation UI to admin dashboard');
+  } else {
+    console.log('✅ Admin dashboard already has client creation UI');
+  }
+} else {
+  console.log('❌ Admin dashboard file not found at:', adminDashboardPath);
+}
+EOF
+
+# Run the UI fix
+node fix-dashboard-ui.js
+
+# 6. Rebuild and restart application
+npm run build
+pm2 restart all
+systemctl reload nginx
+
+# 7. Test the application
+sleep 3
+curl -s http://localhost:3000/api/health
+
+# 8. Clean up temporary files
+rm -f create-admin-now.js fix-dashboard-ui.js
+
+echo ""
+echo "🎉 SETUP COMPLETE!"
+echo "=================="
+echo ""
+echo "🌐 Visit: https://dashboard.aigrowise.com/admin"
+echo "📧 Login: admin@aigrowise.com"
+echo "🔐 Password: Admin123!"
+echo ""
+echo "You should now see prominent 'Create New Client' buttons!"
+echo ""
+echo "If issues persist, check logs:"
+echo "pm2 logs"

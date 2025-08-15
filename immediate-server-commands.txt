@@ -1,0 +1,78 @@
+# Commands to run on dashboard.aigrowise.com server
+# SSH to your server first: ssh root@dashboard.aigrowise.com
+
+# 1. Find and navigate to application directory
+find /var /opt /home -name "package.json" -path "*/aigrowise*" 2>/dev/null
+cd [found_directory]
+
+# OR common locations:
+cd /var/www/aigrowise
+# OR
+cd /opt/aigrowise  
+# OR 
+cd /root/aigrowise
+
+# 2. Check current status
+pwd
+ls -la
+pm2 status
+systemctl status nginx
+systemctl status postgresql
+
+# 3. Test current application
+curl -s http://localhost:3000/api/health
+curl -s https://dashboard.aigrowise.com/api/health
+
+# 4. Check environment and database
+cat .env | head -20
+npm run db:status || npx prisma db push
+
+# 5. Create admin user if missing
+node -e "
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const prisma = new PrismaClient();
+
+async function createAdmin() {
+  try {
+    const admin = await prisma.user.findUnique({where: {email: 'admin@aigrowise.com'}});
+    if (admin) {
+      console.log('✅ Admin exists:', admin.email);
+      return;
+    }
+    
+    const hashedPassword = await bcrypt.hash('Admin123!', 12);
+    const newAdmin = await prisma.user.create({
+      data: {
+        email: 'admin@aigrowise.com',
+        password: hashedPassword,
+        role: 'ADMIN'
+      }
+    });
+    console.log('✅ Created admin:', newAdmin.email, 'password: Admin123!');
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+createAdmin();
+"
+
+# 6. Restart services
+pm2 restart all
+systemctl reload nginx
+
+# 7. Final test
+curl -s https://dashboard.aigrowise.com/api/admin/clients \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"test123"}'
+
+echo "
+🎯 Expected Results:
+- Health endpoint should return 200 with database/storage status
+- Admin user should be created or exist
+- Client creation API should return 401 (unauthorized - expected without session)
+- You should be able to login at https://dashboard.aigrowise.com/admin
+"

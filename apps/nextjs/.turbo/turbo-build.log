@@ -1,0 +1,63 @@
+
+> @bmad-aigrowise/nextjs@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.3
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+DigitalOcean Spaces credentials not configured. File uploads will be disabled.
+   Generating static pages (0/14) ...
+   Generating static pages (3/14) 
+   Generating static pages (6/14) 
+Database health check failed: PrismaClientInitializationError: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Database `aigrowise_dev` does not exist on the database server at `localhost:5432`.
+    at $n.handleRequestError (C:\Users\dswih\Documents\bmad-aigrowise\node_modules\@prisma\client\runtime\library.js:121:7615)
+    at $n.handleAndLogRequestError (C:\Users\dswih\Documents\bmad-aigrowise\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\dswih\Documents\bmad-aigrowise\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\dswih\Documents\bmad-aigrowise\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async p (C:\Users\dswih\Documents\bmad-aigrowise\apps\nextjs\.next\server\app\api\health\route.js:1:632)
+    at async C:\Users\dswih\Documents\bmad-aigrowise\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:34666
+    at async eS.execute (C:\Users\dswih\Documents\bmad-aigrowise\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:25813)
+    at async eS.handle (C:\Users\dswih\Documents\bmad-aigrowise\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:35920)
+    at async exportAppRoute (C:\Users\dswih\Documents\bmad-aigrowise\node_modules\next\dist\export\routes\app-route.js:77:26)
+    at async exportPageImpl (C:\Users\dswih\Documents\bmad-aigrowise\node_modules\next\dist\export\worker.js:175:20) {
+  clientVersion: '5.22.0',
+  errorCode: undefined
+}
+   Generating static pages (10/14) 
+ ✓ Generating static pages (14/14)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    5.29 kB        92.4 kB
+├ ○ /_not-found                          873 B          87.9 kB
+├ ƒ /admin                               4.33 kB         132 kB
+├ ƒ /admin/clients                       2.58 kB        98.5 kB
+├ ƒ /admin/create-client                 2.98 kB        98.9 kB
+├ ƒ /api/admin/clients                   0 B                0 B
+├ ƒ /api/auth/[...nextauth]              0 B                0 B
+├ ƒ /api/health                          0 B                0 B
+├ ƒ /api/images                          0 B                0 B
+├ ƒ /api/images/upload                   0 B                0 B
+├ ƒ /api/trpc/[trpc]                     0 B                0 B
+├ ƒ /dashboard                           14.9 kB         143 kB
+└ ƒ /login                               2.34 kB         108 kB
++ First Load JS shared by all            87.1 kB
+  ├ chunks/1dd3208c-9aeb8a0d99109eb0.js  53.6 kB
+  ├ chunks/286-0d8a46642641ee0a.js       31.5 kB
+  └ other shared chunks (total)          1.99 kB
+
+
+ƒ Middleware                             49.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
