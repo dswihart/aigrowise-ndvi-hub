@@ -17,6 +17,8 @@ export async function findUserById(id: string): Promise<User | null> {
 export async function createUser(data: {
   email: string;
   password: string;
+  firstName?: string;
+  lastName?: string;
   role?: Role;
 }): Promise<User> {
   return await prisma.user.create({
@@ -24,7 +26,7 @@ export async function createUser(data: {
   });
 }
 
-export async function updateUser(id: string, data: Partial<Pick<User, 'email' | 'password' | 'role'>>): Promise<User> {
+export async function updateUser(id: string, data: Partial<Pick<User, 'email' | 'password' | 'firstName' | 'lastName' | 'role'>>): Promise<User> {
   return await prisma.user.update({
     where: { id },
     data,

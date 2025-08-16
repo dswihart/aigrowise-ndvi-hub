@@ -6,6 +6,8 @@ import { useState, useEffect, useRef } from "react";
 interface Client {
   id: string;
   email: string;
+  firstName?: string | null;
+  lastName?: string | null;
   role: string;
   createdAt: string;
 }
@@ -28,6 +30,8 @@ export default function AdminDashboard({ session }: { session: any }) {
   const [showAddClient, setShowAddClient] = useState(false);
   const [newClientEmail, setNewClientEmail] = useState("");
   const [newClientPassword, setNewClientPassword] = useState("");
+  const [newClientFirstName, setNewClientFirstName] = useState("");
+  const [newClientLastName, setNewClientLastName] = useState("");
   const [addingClient, setAddingClient] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,6 +72,8 @@ export default function AdminDashboard({ session }: { session: any }) {
         body: JSON.stringify({
           email: newClientEmail,
           password: newClientPassword,
+          firstName: newClientFirstName || undefined,
+          lastName: newClientLastName || undefined,
         }),
       });
 
@@ -79,6 +85,8 @@ export default function AdminDashboard({ session }: { session: any }) {
         // Clear form
         setNewClientEmail("");
         setNewClientPassword("");
+        setNewClientFirstName("");
+        setNewClientLastName("");
         setShowAddClient(false);
         alert(`Client ${result.client.email} created successfully!`);
       } else {
@@ -218,6 +226,34 @@ export default function AdminDashboard({ session }: { session: any }) {
                 <div className="mb-4 p-4 border border-primary/20 bg-primary/5 rounded-lg">
                   <h4 className="font-medium text-sm mb-3">Create New Client</h4>
                   <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                          First Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newClientFirstName}
+                          onChange={(e) => setNewClientFirstName(e.target.value)}
+                          placeholder="John"
+                          className="w-full p-2 text-sm border border-border rounded-md focus:ring-2 focus:ring-ring"
+                          disabled={addingClient}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                          Last Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newClientLastName}
+                          onChange={(e) => setNewClientLastName(e.target.value)}
+                          placeholder="Doe"
+                          className="w-full p-2 text-sm border border-border rounded-md focus:ring-2 focus:ring-ring"
+                          disabled={addingClient}
+                        />
+                      </div>
+                    </div>
                     <div>
                       <label className="block text-xs font-medium text-muted-foreground mb-1">
                         Email Address
@@ -262,7 +298,9 @@ export default function AdminDashboard({ session }: { session: any }) {
                 <option value="">Choose a client...</option>
                 {clients.map((client) => (
                   <option key={client.id} value={client.id}>
-                    {client.email}
+                    {client.firstName || client.lastName ? 
+                      `${client.firstName || ''} ${client.lastName || ''} (${client.email})`.trim() : 
+                      client.email}
                   </option>
                 ))}
               </select>
@@ -280,7 +318,12 @@ export default function AdminDashboard({ session }: { session: any }) {
                       }`}
                       onClick={() => setSelectedClient(client.id)}
                     >
-                      <div className="text-sm font-medium">{client.email}</div>
+                      <div className="text-sm font-medium">
+                        {client.firstName || client.lastName ? 
+                          `${client.firstName || ''} ${client.lastName || ''}`.trim() : 
+                          'Unnamed Client'}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{client.email}</div>
                       <div className="text-xs text-muted-foreground">
                         Joined: {new Date(client.createdAt).toLocaleDateString()}
                       </div>
