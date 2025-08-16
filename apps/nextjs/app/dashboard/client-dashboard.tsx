@@ -61,7 +61,9 @@ export default function ClientDashboard({ session }: { session: any }) {
   const handleDownload = (image: Image) => {
     const link = document.createElement('a');
     link.href = image.url;
-    link.download = image.filename || `ndvi-image-${image.id}.tiff`;
+    link.download = image.originalFileName || image.fileName || image.filename || `ndvi-image-${image.id}.tiff`;
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -74,7 +76,40 @@ export default function ClientDashboard({ session }: { session: any }) {
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-const getImagePreview = (image: Image) => {    // Use thumbnail if available, fallback to optimized, then original    const imageUrl = image.thumbnailUrl || image.optimizedUrl || image.url;        // Show placeholder only for TIFF files that have no thumbnails    if (!image.thumbnailUrl && !image.optimizedUrl &&         (image.mimeType?.includes("tiff") ||          image.filename?.toLowerCase().includes(".tif") ||          image.fileName?.toLowerCase().includes(".tif"))) {      return (        <div className="w-full h-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">          <div className="text-center">            <span className="text-4xl mb-2 block">🌾</span>            <span className="text-sm font-medium text-green-800">NDVI Image</span>            <span className="text-xs text-green-600 block mt-1">Processing...</span>          </div>        </div>      );    }        return (      <img         src={imageUrl}         alt={image.title || image.originalFileName || image.fileName || "NDVI Image"}        className="w-full h-full object-cover"        loading="lazy"        onError={(e) => {          const target = e.target as HTMLImageElement;          if (target.src !== image.url) {            target.src = image.url;          }        }}      />    );  };
+const getImagePreview = (image: Image) => {
+    // Use thumbnail if available, fallback to optimized, then original
+    const imageUrl = image.thumbnailUrl || image.optimizedUrl || image.url;
+    
+    // Show placeholder only for TIFF files that have no thumbnails
+    if (!image.thumbnailUrl && !image.optimizedUrl && 
+        (image.mimeType?.includes("tiff") || 
+         image.filename?.toLowerCase().includes(".tif") || 
+         image.fileName?.toLowerCase().includes(".tif"))) {
+      return (
+        <div className="w-full h-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+          <div className="text-center">
+            <span className="text-4xl mb-2 block">🌾</span>
+            <span className="text-sm font-medium text-green-800">NDVI Image</span>
+            <span className="text-xs text-green-600 block mt-1">Processing...</span>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <img 
+        src={imageUrl}
+        alt={image.title || image.originalFileName || image.fileName || "NDVI Image"}
+        className="w-full h-full object-cover"
+        loading="lazy"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          if (target.src !== image.url) {
+            target.src = image.url;
+          }
+        }}
+      />
+    );
   };
 
   const totalFileSize = images.reduce((sum, img) => sum + (img.fileSize || 0), 0);
@@ -253,7 +288,7 @@ const getImagePreview = (image: Image) => {    // Use thumbnail if available, fa
                           </div>
                           <CardContent className="p-4">
                             <p className="text-sm font-medium text-gray-900 mb-1 truncate">
-                              {image.title || image.filename || `Image #${index + 1}`}
+                              {image.title || image.originalFileName || image.fileName || image.filename || `Image #${index + 1}`}
                             </p>
                             <p className="text-xs text-gray-500 mb-2">
                               {new Date(image.createdAt).toLocaleDateString()}
@@ -271,7 +306,7 @@ const getImagePreview = (image: Image) => {    // Use thumbnail if available, fa
                       <DialogHeader>
                         <DialogTitle className="flex items-center space-x-2">
                           <span>🌾</span>
-                          <span>{image.title || image.filename || 'NDVI Image'}</span>
+                          <span>{image.title || image.originalFileName || image.fileName || image.filename || 'NDVI Image'}</span>
                         </DialogTitle>
                         <DialogDescription>
                           Captured on {new Date(image.createdAt).toLocaleDateString()} at{' '}
@@ -313,10 +348,10 @@ const getImagePreview = (image: Image) => {    // Use thumbnail if available, fa
                                 <span className="text-blue-700">Image ID:</span>
                                 <span className="font-mono text-blue-600">{image.id.slice(-8)}</span>
                               </div>
-                              {image.filename && (
+                              {(image.originalFileName || image.fileName || image.filename) && (
                                 <div className="flex justify-between">
                                   <span className="text-blue-700">Filename:</span>
-                                  <span className="text-blue-600 truncate ml-2">{image.filename}</span>
+                                  <span className="text-blue-600 truncate ml-2">{image.originalFileName || image.fileName || image.filename}</span>
                                 </div>
                               )}
                               {image.fileSize && (
@@ -379,7 +414,7 @@ const getImagePreview = (image: Image) => {    // Use thumbnail if available, fa
                               </div>
                               <div className="flex-grow">
                                 <h4 className="font-medium text-gray-900">
-                                  {image.title || image.filename || `NDVI Image #${index + 1}`}
+                                  {image.title || image.originalFileName || image.fileName || image.filename || `NDVI Image #${index + 1}`}
                                 </h4>
                                 <p className="text-sm text-gray-500">
                                   {new Date(image.createdAt).toLocaleDateString()} • {formatFileSize(image.fileSize)}
@@ -395,7 +430,100 @@ const getImagePreview = (image: Image) => {    // Use thumbnail if available, fa
                         </Card>
                       </div>
                     </DialogTrigger>
-                    {/* Same modal content as grid view */}
+                    <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center space-x-2">
+                          <span>🌾</span>
+                          <span>{image.title || image.originalFileName || image.fileName || image.filename || 'NDVI Image'}</span>
+                        </DialogTitle>
+                        <DialogDescription>
+                          Captured on {new Date(image.createdAt).toLocaleDateString()} at{' '}
+                          {new Date(image.createdAt).toLocaleTimeString()}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-6">
+                        {/* Image Preview */}
+                        <div className="bg-gray-100 rounded-lg overflow-hidden">
+                          <div className="aspect-video flex items-center justify-center">
+                            {getImagePreview(image)}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap gap-3">
+                          <Button 
+                            onClick={() => window.open(image.url, '_blank')}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <span className="mr-2">🔍</span>
+                            View Full Resolution
+                          </Button>
+                          <Button 
+                            onClick={() => handleDownload(image)}
+                            variant="outline"
+                          >
+                            <span className="mr-2">📥</span>
+                            Download Image
+                          </Button>
+                        </div>
+
+                        {/* Image Metadata */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-blue-50 p-4 rounded-lg">
+                            <h4 className="font-medium text-blue-900 mb-3">Image Details</h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-blue-700">Image ID:</span>
+                                <span className="font-mono text-blue-600">{image.id.slice(-8)}</span>
+                              </div>
+                              {(image.originalFileName || image.fileName || image.filename) && (
+                                <div className="flex justify-between">
+                                  <span className="text-blue-700">Filename:</span>
+                                  <span className="text-blue-600 truncate ml-2">{image.originalFileName || image.fileName || image.filename}</span>
+                                </div>
+                              )}
+                              {image.fileSize && (
+                                <div className="flex justify-between">
+                                  <span className="text-blue-700">File Size:</span>
+                                  <span className="text-blue-600">{formatFileSize(image.fileSize)}</span>
+                                </div>
+                              )}
+                              {image.mimeType && (
+                                <div className="flex justify-between">
+                                  <span className="text-blue-700">Format:</span>
+                                  <span className="text-blue-600">{image.mimeType.split('/')[1]?.toUpperCase()}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="bg-green-50 p-4 rounded-lg">
+                            <h4 className="font-medium text-green-900 mb-3">Analysis Info</h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-green-700">Upload Date:</span>
+                                <span className="text-green-600">{new Date(image.createdAt).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-green-700">Time:</span>
+                                <span className="text-green-600">{new Date(image.createdAt).toLocaleTimeString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-green-700">Status:</span>
+                                <span className="text-green-600">✅ Ready for Analysis</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {image.description && (
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <h4 className="font-medium text-gray-900 mb-2">Description</h4>
+                            <p className="text-sm text-gray-600">{image.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
                   </Dialog>
                 ))}
               </div>
