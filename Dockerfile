@@ -28,17 +28,21 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-# Install OpenSSL for Prisma
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# Install OpenSSL and wget for Prisma and health checks
+RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 # Uncomment the following line in case you want to disable telemetry during runtime.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN groupadd --gid 1001 nodejs
 RUN useradd --uid 1001 --gid nodejs nextjs
 
 COPY --from=builder /app/apps/nextjs/public ./apps/nextjs/public
+
+# Create uploads directory with proper permissions
+RUN mkdir -p ./apps/nextjs/public/uploads
+RUN chown -R nextjs:nodejs ./apps/nextjs/public
 
 # Set the correct permission for prerender cache
 RUN mkdir .next
@@ -55,10 +59,10 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
+ENV PORT=3000
 # set hostname to localhost
-ENV HOSTNAME "0.0.0.0"
+ENV HOSTNAME=0.0.0.0
 
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/next-config-js/output
-CMD ["node", "apps/nextjs/server.js"]
+CMD [node, apps/nextjs/server.js]
