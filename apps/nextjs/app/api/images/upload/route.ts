@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../lib/auth";
 import { createImage, findUserByEmail } from "../../../../lib/db";
+import { processImage } from "../../../../lib/image-processor";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 export const runtime = 'nodejs';

@@ -102,7 +102,7 @@ export default function ImageUpload({ onUploadSuccess }: { onUploadSuccess?: () 
 					) : (
 						<>
 							<p className="text-lg text-gray-600">
-								Drop your satellite images here or click to browse
+								Drop your drone images here or click to browse
 							</p>
 							<p className="text-sm text-gray-500">
 								Supports: TIFF, GeoTIFF, PNG, JPEG formats

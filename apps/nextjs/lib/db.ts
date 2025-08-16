@@ -51,19 +51,7 @@ export async function getUsersByRole(role: Role): Promise<User[]> {
 }
 
 // Image operations
-export async function createImage(data: {
-  url: string;
-  filename?: string | null;
-  title?: string | null;
-  description?: string | null;
-  fileSize?: number | null;
-  mimeType?: string | null;
-  userId: string;
-}): Promise<Image> {
-  return await prisma.image.create({
-    data,
-  });
-}
+export async function createImage(data: {  url: string;  thumbnailUrl?: string | null;  optimizedUrl?: string | null;  originalFileName?: string | null;  fileName?: string | null;  fileSize?: number | null;  mimeType?: string | null;  width?: number | null;  height?: number | null;  format?: string | null;  channels?: number | null;  colorspace?: string | null;  hasAlpha?: boolean;  compressionRatio?: number | null;  isProcessed?: boolean;  processingStatus?: string;  userId: string;}): Promise<Image> {  return await prisma.image.create({    data,  });}
 
 export async function findImageById(id: string): Promise<(Image & { user: User }) | null> {
   return await prisma.image.findUnique({

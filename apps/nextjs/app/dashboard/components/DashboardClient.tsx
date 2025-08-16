@@ -104,7 +104,7 @@ export default function DashboardClient({ session }: { session: any }) {
 						) : (
 							<div className="text-center py-8 text-gray-500">
 								<p className="text-lg mb-2">No images uploaded yet</p>
-								<p className="text-sm">Upload your first satellite image to get started</p>
+								<p className="text-sm">Upload your first drone image to get started</p>
 							</div>
 						)}
 					</div>
