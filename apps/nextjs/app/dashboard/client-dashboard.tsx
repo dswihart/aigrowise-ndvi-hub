@@ -7,6 +7,70 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
+// Component for displaying images with signed URLs
+function SignedImage({ src, alt, className }: { src: string; alt: string; className: string }) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    async function getSignedUrl() {
+      try {
+        const response = await fetch('/api/images/signed-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: src }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSignedUrl(data.signedUrl);
+        } else {
+          setError(true);
+        }
+      } catch (err) {
+        console.error('Error getting signed URL:', err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    getSignedUrl();
+  }, [src]);
+
+  if (loading) {
+    return (
+      <div className={`${className} bg-gray-200 animate-pulse flex items-center justify-center`}>
+        <span className="text-gray-500 text-sm">Loading...</span>
+      </div>
+    );
+  }
+
+  if (error || !signedUrl) {
+    return (
+      <div className={`${className} bg-gray-100 flex items-center justify-center`}>
+        <div className="text-center">
+          <span className="text-2xl mb-1 block">🌾</span>
+          <span className="text-xs text-gray-600">NDVI Image</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <img 
+      src={signedUrl}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      onError={() => setError(true)}
+    />
+  );
+}
+
 interface Image {
   id: string;
   url: string;
@@ -58,15 +122,59 @@ export default function ClientDashboard({ session }: { session: any }) {
     signOut({ callbackUrl: "/login" });
   };
 
-  const handleDownload = (image: Image) => {
-    const link = document.createElement('a');
-    link.href = image.url;
-    link.download = image.originalFileName || image.fileName || image.filename || `ndvi-image-${image.id}.tiff`;
-    link.setAttribute('target', '_blank');
-    link.setAttribute('rel', 'noopener noreferrer');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async (image: Image) => {
+    try {
+      // Generate signed URL for download
+      const response = await fetch('/api/images/signed-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: image.url }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const link = document.createElement('a');
+        link.href = data.signedUrl;
+        link.download = image.originalFileName || image.fileName || image.filename || `ndvi-image-${image.id}.tiff`;
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        console.error('Failed to generate signed URL for download');
+        alert('Failed to download image. Please try again.');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download image. Please try again.');
+    }
+  };
+
+  const handleViewFullResolution = async (image: Image) => {
+    try {
+      // Generate signed URL for viewing
+      const response = await fetch('/api/images/signed-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: image.url }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        window.open(data.signedUrl, '_blank');
+      } else {
+        console.error('Failed to generate signed URL for viewing');
+        alert('Failed to open image. Please try again.');
+      }
+    } catch (error) {
+      console.error('View error:', error);
+      alert('Failed to open image. Please try again.');
+    }
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -90,24 +198,17 @@ const getImagePreview = (image: Image) => {
           <div className="text-center">
             <span className="text-4xl mb-2 block">🌾</span>
             <span className="text-sm font-medium text-green-800">NDVI Image</span>
-            <span className="text-xs text-green-600 block mt-1">Processing...</span>
+            <span className="text-xs text-green-600 block mt-1">Click to view</span>
           </div>
         </div>
       );
     }
     
     return (
-      <img 
+      <SignedImage 
         src={imageUrl}
         alt={image.title || image.originalFileName || image.fileName || "NDVI Image"}
         className="w-full h-full object-cover"
-        loading="lazy"
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          if (target.src !== image.url) {
-            target.src = image.url;
-          }
-        }}
       />
     );
   };
@@ -324,7 +425,7 @@ const getImagePreview = (image: Image) => {
                         {/* Action Buttons */}
                         <div className="flex flex-wrap gap-3">
                           <Button 
-                            onClick={() => window.open(image.url, '_blank')}
+                            onClick={() => handleViewFullResolution(image)}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
                             <span className="mr-2">🔍</span>
@@ -452,7 +553,7 @@ const getImagePreview = (image: Image) => {
                         {/* Action Buttons */}
                         <div className="flex flex-wrap gap-3">
                           <Button 
-                            onClick={() => window.open(image.url, '_blank')}
+                            onClick={() => handleViewFullResolution(image)}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
                             <span className="mr-2">🔍</span>
