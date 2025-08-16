@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../lib/auth";
 import { listUsers } from "@bmad-aigrowise/db";
+import { createUser, findUserByEmail } from "../../../../lib/db";
+import bcrypt from "bcryptjs";
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +44,74 @@ export async function GET(request: NextRequest) {
     console.error("Fetch clients error:", error);
     return NextResponse.json(
       { error: "Failed to fetch clients" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is admin
+    const user = session.user as any;
+    if (user.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    const { email, password } = await request.json();
+
+    // Validate input
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password are required" },
+        { status: 400 }
+      );
+    }
+
+    // Check if user already exists
+    const existingUser = await findUserByEmail(email);
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "User with this email already exists" },
+        { status: 400 }
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new client user
+    const newUser = await createUser({
+      email,
+      password: hashedPassword,
+      role: "CLIENT"
+    });
+
+    return NextResponse.json({
+      success: true,
+      client: {
+        id: newUser.id,
+        email: newUser.email,
+        role: newUser.role,
+        createdAt: newUser.createdAt.toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error("Create client error:", error);
+    return NextResponse.json(
+      { error: "Failed to create client" },
       { status: 500 }
     );
   }

@@ -25,6 +25,10 @@ export default function AdminDashboard({ session }: { session: any }) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [recentUploads, setRecentUploads] = useState<UploadedImage[]>([]);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientPassword, setNewClientPassword] = useState("");
+  const [addingClient, setAddingClient] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogout = () => {
@@ -45,6 +49,46 @@ export default function AdminDashboard({ session }: { session: any }) {
       }
     } catch (error) {
       console.error("Error fetching clients:", error);
+    }
+  };
+
+  const handleAddClient = async () => {
+    if (!newClientEmail || !newClientPassword) {
+      alert("Please enter both email and password");
+      return;
+    }
+
+    setAddingClient(true);
+    try {
+      const response = await fetch("/api/admin/clients", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: newClientEmail,
+          password: newClientPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Add new client to the list
+        setClients(prev => [result.client, ...prev]);
+        // Clear form
+        setNewClientEmail("");
+        setNewClientPassword("");
+        setShowAddClient(false);
+        alert(`Client ${result.client.email} created successfully!`);
+      } else {
+        throw new Error(result.error || "Failed to create client");
+      }
+    } catch (error) {
+      console.error("Error creating client:", error);
+      alert(error instanceof Error ? error.message : "Failed to create client");
+    } finally {
+      setAddingClient(false);
     }
   };
 
@@ -159,7 +203,57 @@ export default function AdminDashboard({ session }: { session: any }) {
           {/* Client Selection */}
           <div className="lg:col-span-1">
             <div className="bg-card rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold mb-4">Select Client</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Select Client</h3>
+                <button
+                  onClick={() => setShowAddClient(!showAddClient)}
+                  className="text-sm bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1 rounded-md transition-colors"
+                >
+                  {showAddClient ? "Cancel" : "+ Add Client"}
+                </button>
+              </div>
+
+              {/* Add New Client Form */}
+              {showAddClient && (
+                <div className="mb-4 p-4 border border-primary/20 bg-primary/5 rounded-lg">
+                  <h4 className="font-medium text-sm mb-3">Create New Client</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={newClientEmail}
+                        onChange={(e) => setNewClientEmail(e.target.value)}
+                        placeholder="client@example.com"
+                        className="w-full p-2 text-sm border border-border rounded-md focus:ring-2 focus:ring-ring"
+                        disabled={addingClient}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        value={newClientPassword}
+                        onChange={(e) => setNewClientPassword(e.target.value)}
+                        placeholder="Enter password"
+                        className="w-full p-2 text-sm border border-border rounded-md focus:ring-2 focus:ring-ring"
+                        disabled={addingClient}
+                      />
+                    </div>
+                    <button
+                      onClick={handleAddClient}
+                      disabled={addingClient || !newClientEmail || !newClientPassword}
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {addingClient ? "Creating..." : "Create Client"}
+                    </button>
+                  </div>
+                </div>
+              )}
               <select
                 value={selectedClient}
                 onChange={(e) => setSelectedClient(e.target.value)}
