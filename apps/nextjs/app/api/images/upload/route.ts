@@ -185,6 +185,7 @@ export async function POST(request: NextRequest) {
         Key: key,
         Body: file.buffer,
         ContentType: file.type,
+        ACL: 'public-read',
       });
 
       const result = await s3Client.send(uploadCommand);
