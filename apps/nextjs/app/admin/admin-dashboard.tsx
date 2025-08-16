@@ -33,6 +33,10 @@ export default function AdminDashboard({ session }: { session: any }) {
   const [newClientFirstName, setNewClientFirstName] = useState("");
   const [newClientLastName, setNewClientLastName] = useState("");
   const [addingClient, setAddingClient] = useState(false);
+  const [resetPasswordClient, setResetPasswordClient] = useState<string>("");
+  const [newPassword, setNewPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [deletingClient, setDeletingClient] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogout = () => {
@@ -97,6 +101,74 @@ export default function AdminDashboard({ session }: { session: any }) {
       alert(error instanceof Error ? error.message : "Failed to create client");
     } finally {
       setAddingClient(false);
+    }
+  };
+
+  const handleResetPassword = async (clientId: string) => {
+    if (!newPassword) {
+      alert("Please enter a new password");
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const response = await fetch("/api/admin/clients", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clientId,
+          newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert("Password reset successfully!");
+        setResetPasswordClient("");
+        setNewPassword("");
+      } else {
+        throw new Error(result.error || "Failed to reset password");
+      }
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      alert(error instanceof Error ? error.message : "Failed to reset password");
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const handleDeleteClient = async (clientId: string, clientEmail: string) => {
+    if (!confirm(`Are you sure you want to delete client ${clientEmail}? This action cannot be undone and will also delete all their images.`)) {
+      return;
+    }
+
+    setDeletingClient(clientId);
+    try {
+      const response = await fetch(`/api/admin/clients?id=${clientId}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Remove client from the list
+        setClients(prev => prev.filter(client => client.id !== clientId));
+        // Clear selection if this client was selected
+        if (selectedClient === clientId) {
+          setSelectedClient("");
+        }
+        alert(`Client ${clientEmail} deleted successfully!`);
+      } else {
+        throw new Error(result.error || "Failed to delete client");
+      }
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      alert(error instanceof Error ? error.message : "Failed to delete client");
+    } finally {
+      setDeletingClient("");
     }
   };
 
@@ -307,26 +379,88 @@ export default function AdminDashboard({ session }: { session: any }) {
               
               <div className="mt-4">
                 <h4 className="font-medium text-sm text-muted-foreground mb-2">Clients ({clients.length})</h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
+                <div className="space-y-2 max-h-60 overflow-y-auto">
                   {clients.map((client) => (
                     <div 
                       key={client.id} 
-                      className={`p-2 rounded border cursor-pointer transition-colors ${
+                      className={`p-3 rounded border transition-colors ${
                         selectedClient === client.id 
                           ? "bg-primary/10 border-primary" 
                           : "bg-muted border-border hover:bg-accent"
                       }`}
-                      onClick={() => setSelectedClient(client.id)}
                     >
-                      <div className="text-sm font-medium">
-                        {client.firstName || client.lastName ? 
-                          `${client.firstName || ''} ${client.lastName || ''}`.trim() : 
-                          'Unnamed Client'}
+                      <div className="flex justify-between items-start">
+                        <div 
+                          className="flex-1 cursor-pointer"
+                          onClick={() => setSelectedClient(client.id)}
+                        >
+                          <div className="text-sm font-medium">
+                            {client.firstName || client.lastName ? 
+                              `${client.firstName || ''} ${client.lastName || ''}`.trim() : 
+                              'Unnamed Client'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{client.email}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Joined: {new Date(client.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div className="flex space-x-1 ml-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setResetPasswordClient(client.id);
+                            }}
+                            className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
+                            disabled={resettingPassword || deletingClient === client.id}
+                          >
+                            🔑 Reset
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClient(client.id, client.email);
+                            }}
+                            className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors"
+                            disabled={deletingClient === client.id || resettingPassword}
+                          >
+                            {deletingClient === client.id ? "..." : "🗑️ Delete"}
+                          </button>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">{client.email}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Joined: {new Date(client.createdAt).toLocaleDateString()}
-                      </div>
+                      
+                      {/* Reset Password Form */}
+                      {resetPasswordClient === client.id && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <div className="text-xs font-medium mb-2">Reset Password for {client.email}</div>
+                          <div className="flex space-x-2">
+                            <input
+                              type="password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="New password"
+                              className="flex-1 text-xs p-2 border border-border rounded focus:ring-2 focus:ring-ring"
+                              disabled={resettingPassword}
+                            />
+                            <button
+                              onClick={() => handleResetPassword(client.id)}
+                              disabled={resettingPassword || !newPassword}
+                              className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded transition-colors disabled:opacity-50"
+                            >
+                              {resettingPassword ? "..." : "✓ Set"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setResetPasswordClient("");
+                                setNewPassword("");
+                              }}
+                              className="text-xs bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded transition-colors"
+                              disabled={resettingPassword}
+                            >
+                              ✕ Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -387,7 +521,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                         Drop NDVI images here or click to browse
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Supports: TIFF, GeoTIFF, PNG, JPEG formats (Max: 50MB)
+                        Supports: TIFF, GeoTIFF, PNG, JPEG formats (Max: 500MB)
                       </p>
                       <button 
                         className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 px-6 rounded-lg transition-colors"

@@ -7,49 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-// Component for displaying images with signed URLs
-function SignedImage({ src, alt, className }: { src: string; alt: string; className: string }) {
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+// Component for displaying images with direct URLs (public bucket)
+function NDVIImage({ src, alt, className }: { src: string; alt: string; className: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    async function getSignedUrl() {
-      try {
-        const response = await fetch('/api/images/signed-url', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ url: src }),
-        });
+  const handleLoad = () => {
+    setLoading(false);
+  };
 
-        if (response.ok) {
-          const data = await response.json();
-          setSignedUrl(data.signedUrl);
-        } else {
-          setError(true);
-        }
-      } catch (err) {
-        console.error('Error getting signed URL:', err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const handleError = () => {
+    setLoading(false);
+    setError(true);
+  };
 
-    getSignedUrl();
-  }, [src]);
-
-  if (loading) {
-    return (
-      <div className={`${className} bg-gray-200 animate-pulse flex items-center justify-center`}>
-        <span className="text-gray-500 text-sm">Loading...</span>
-      </div>
-    );
-  }
-
-  if (error || !signedUrl) {
+  if (error) {
     return (
       <div className={`${className} bg-gray-100 flex items-center justify-center`}>
         <div className="text-center">
@@ -61,13 +33,22 @@ function SignedImage({ src, alt, className }: { src: string; alt: string; classN
   }
 
   return (
-    <img 
-      src={signedUrl}
-      alt={alt}
-      className={className}
-      loading="lazy"
-      onError={() => setError(true)}
-    />
+    <div className="relative">
+      {loading && (
+        <div className={`${className} bg-gray-200 animate-pulse flex items-center justify-center absolute inset-0`}>
+          <span className="text-gray-500 text-sm">Loading...</span>
+        </div>
+      )}
+      <img 
+        src={src}
+        alt={alt}
+        className={className}
+        loading="lazy"
+        onLoad={handleLoad}
+        onError={handleError}
+        style={{ display: loading ? 'none' : 'block' }}
+      />
+    </div>
   );
 }
 
@@ -124,29 +105,15 @@ export default function ClientDashboard({ session }: { session: any }) {
 
   const handleDownload = async (image: Image) => {
     try {
-      // Generate signed URL for download
-      const response = await fetch('/api/images/signed-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: image.url }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const link = document.createElement('a');
-        link.href = data.signedUrl;
-        link.download = image.originalFileName || image.fileName || image.filename || `ndvi-image-${image.id}.tiff`;
-        link.setAttribute('target', '_blank');
-        link.setAttribute('rel', 'noopener noreferrer');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        console.error('Failed to generate signed URL for download');
-        alert('Failed to download image. Please try again.');
-      }
+      // Use direct URL for download (public bucket)
+      const link = document.createElement('a');
+      link.href = image.url;
+      link.download = image.originalFileName || image.fileName || image.filename || `ndvi-image-${image.id}.tiff`;
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error('Download error:', error);
       alert('Failed to download image. Please try again.');
@@ -205,7 +172,7 @@ const getImagePreview = (image: Image) => {
     }
     
     return (
-      <SignedImage 
+      <NDVIImage 
         src={imageUrl}
         alt={image.title || image.originalFileName || image.fileName || "NDVI Image"}
         className="w-full h-full object-cover"

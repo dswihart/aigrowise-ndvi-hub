@@ -68,6 +68,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate file size (500MB limit)
+    if (file.size > 500 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: "File too large. Maximum size is 500MB." },
+        { status: 400 }
+      );
+    }
+
     // Generate unique filename
     const timestamp = Date.now();
     const fileExtension = path.extname(file.name);
@@ -171,7 +179,7 @@ export async function GET(request: NextRequest) {
       images: images.map(img => ({
         id: img.id,
         url: img.url,
-        filename: img.filename,
+        fileName: img.fileName,
         title: img.title,
         fileSize: img.fileSize,
         mimeType: img.mimeType,

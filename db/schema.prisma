@@ -1,40 +1,52 @@
-// Aigrowise NDVI Hub Database Schema
-// Based on architecture specification
-
 generator client {
-  provider = prisma-client-js
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = postgresql
-  url      = env(DATABASE_URL)
-}
-
-enum Role {
-  CLIENT
-  ADMIN
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
-  firstName String?
-  lastName  String?
   role      Role     @default(CLIENT)
-  images    Image[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  firstName String?
+  lastName  String?
+  images    Image[]
 }
 
 model Image {
-  id        String   @id @default(cuid())
-  url       String
-  filename  String?
-  title     String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  url              String
+  fileSize         Int?
+  mimeType         String?
+  userId           String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+  thumbnailUrl     String?
+  optimizedUrl     String?
+  originalFileName String?
+  fileName         String?
+  width            Int?
+  height           Int?
+  format           String?
+  channels         Int?
+  colorspace       String?
+  hasAlpha         Boolean  @default(false)
+  compressionRatio Float?
+  isProcessed      Boolean  @default(false)
+  processingStatus String   @default("pending")
+  user             User     @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "Image_user_id_idx")
+  @@index([processingStatus], map: "Image_processing_status_idx")
+}
+
+enum Role {
+  CLIENT
+  ADMIN
 }
