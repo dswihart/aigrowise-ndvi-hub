@@ -14,7 +14,7 @@ async function parseFormData(request: NextRequest): Promise<{ fields: Record<str
     const fields: Record<string, string> = {};
     let file: { buffer: Buffer; name: string; type: string; size: number } | null = null;
 
-    for (const [key, value] of formData.entries()) {
+    for (const [key, value] of Array.from(formData.entries())) {
       if (value instanceof File) {
         const arrayBuffer = await value.arrayBuffer();
         file = {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.id) {
+    if (!session?.user) {
       console.log("❌ No valid session found");
       return NextResponse.json(
         { error: "Unauthorized" },

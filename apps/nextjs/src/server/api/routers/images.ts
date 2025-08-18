@@ -28,9 +28,7 @@ export const imagesRouter = createTRPCRouter({
     return images.map((image) => ({
       id: image.id,
       url: image.url,
-      filename: image.filename,
-      title: image.title,
-      description: image.description,
+      fileName: image.fileName,
       fileSize: image.fileSize,
       mimeType: image.mimeType,
       createdAt: image.createdAt,
@@ -63,9 +61,7 @@ export const imagesRouter = createTRPCRouter({
       return {
         id: image.id,
         url: image.url,
-        filename: image.filename,
-        title: image.title,
-        description: image.description,
+        fileName: image.fileName,
         fileSize: image.fileSize,
         mimeType: image.mimeType,
         createdAt: image.createdAt,
@@ -83,8 +79,6 @@ export const imagesRouter = createTRPCRouter({
         imageUrl: z.string().url(),
         clientEmail: z.string().email(),
         filename: z.string().optional(),
-        title: z.string().optional(),
-        description: z.string().optional(),
         fileSize: z.number().optional(),
         mimeType: z.string().optional(),
       })
@@ -108,9 +102,7 @@ export const imagesRouter = createTRPCRouter({
       const image = await createImage({
         url: input.imageUrl,
         userId: client.id,
-        filename: input.filename,
-        title: input.title,
-        description: input.description,
+        fileName: input.filename,
         fileSize: input.fileSize,
         mimeType: input.mimeType,
       });
@@ -120,8 +112,7 @@ export const imagesRouter = createTRPCRouter({
         image: {
           id: image.id,
           url: image.url,
-          filename: image.filename,
-          title: image.title,
+          fileName: image.fileName,
           clientEmail: client.email,
           createdAt: image.createdAt,
         },
@@ -157,9 +148,7 @@ export const imagesRouter = createTRPCRouter({
         images: images.map((image) => ({
           id: image.id,
           url: image.url,
-          filename: image.filename,
-          title: image.title,
-          description: image.description,
+          fileName: image.fileName,
           fileSize: image.fileSize,
           mimeType: image.mimeType,
           createdAt: image.createdAt,
@@ -254,8 +243,6 @@ export const imagesRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
-        title: z.string().optional(),
-        description: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -270,8 +257,6 @@ export const imagesRouter = createTRPCRouter({
 
       const updatedImage = await updateImage({
         id: input.id,
-        title: input.title,
-        description: input.description,
       });
 
       // Get user info for response
@@ -282,9 +267,7 @@ export const imagesRouter = createTRPCRouter({
         image: {
           id: updatedImage.id,
           url: updatedImage.url,
-          filename: updatedImage.filename,
-          title: updatedImage.title,
-          description: updatedImage.description,
+          fileName: updatedImage.fileName,
           createdAt: updatedImage.createdAt,
           user: {
             email: user?.email || "",

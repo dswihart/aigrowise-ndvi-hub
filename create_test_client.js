@@ -1,44 +1,46 @@
+const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
-const { Client } = require('pg');
+
+const prisma = new PrismaClient();
 
 async function createTestClient() {
-  const client = new Client({
-    connectionString: 'postgresql://aigrowise_user:aigrowise_pass@localhost:5432/aigrowise_production'
-  });
-
   try {
-    await client.connect();
-    console.log('Connected to database');
+    console.log('Creating test client...');
     
-    const email = 'testclient@example.com';
-    const password = 'testpass123';
-    
-    // Check if client already exists
-    const existing = await client.query('SELECT * FROM "User" WHERE email = $1', [email]);
-    if (existing.rows.length > 0) {
-      console.log('✅ Test client already exists:', email);
-      return;
+    // Check if test client already exists
+    const existingClient = await prisma.user.findUnique({
+      where: { email: 'client@aigrowise.com' }
+    });
+
+    const hashedPassword = await bcrypt.hash('client123', 12);
+
+    if (existingClient) {
+      console.log('Updating existing test client...');
+      await prisma.user.update({
+        where: { email: 'client@aigrowise.com' },
+        data: { password: hashedPassword }
+      });
+      console.log('Test client password updated successfully!');
+    } else {
+      console.log('Creating new test client...');
+      await prisma.user.create({
+        data: {
+          email: 'client@aigrowise.com',
+          password: hashedPassword,
+          role: 'CLIENT'
+        }
+      });
+      console.log('Test client created successfully!');
     }
-    
-    // Create hash
-    const hash = await bcrypt.hash(password, 12);
-    console.log('Created password hash');
-    
-    // Insert client
-    const result = await client.query(
-      'INSERT INTO "User" (id, email, password, role, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING email, role',
-      ['client-test-001', email, hash, 'CLIENT']
-    );
-    
-    console.log('✅ Test client created successfully!');
-    console.log('📧 Email:', result.rows[0].email);
-    console.log('🔑 Password:', password);
-    console.log('👤 Role:', result.rows[0].role);
-    
+
+    console.log('Test client credentials:');
+    console.log('Email: client@aigrowise.com');
+    console.log('Password: client123');
+
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('Error:', error);
   } finally {
-    await client.end();
+    await prisma.$disconnect();
   }
 }
 

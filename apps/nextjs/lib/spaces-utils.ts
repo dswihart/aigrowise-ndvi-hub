@@ -1,84 +1,84 @@
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-// Create S3 client for DigitalOcean Spaces
-function createSpacesClient() {
-  const accessKey = process.env.DO_SPACES_ACCESS_KEY;
-  const secretKey = process.env.DO_SPACES_SECRET_KEY;
-  const endpoint = process.env.DO_SPACES_ENDPOINT;
-  const region = process.env.DO_SPACES_REGION || 'fra1';
+const spacesClient = new S3Client({
+  endpoint: process.env.DO_SPACES_ENDPOINT || 'https://nyc3.digitaloceanspaces.com',
+  region: process.env.DO_SPACES_REGION || 'nyc3',
+  credentials: {
+    accessKeyId: process.env.DO_SPACES_ACCESS_KEY || '',
+    secretAccessKey: process.env.DO_SPACES_SECRET_KEY || '',
+  },
+});
 
-  if (!accessKey || !secretKey || !endpoint) {
-    throw new Error('DigitalOcean Spaces configuration missing');
-  }
+const BUCKET_NAME = process.env.DO_SPACES_BUCKET || 'aigrowise-ndvi-images';
 
-  return new S3Client({
-    endpoint: endpoint,
-    region: region,
-    credentials: {
-      accessKeyId: accessKey,
-      secretAccessKey: secretKey,
-    },
-    forcePathStyle: false,
-  });
-}
+export async function uploadToSpaces(file: Buffer, fileName: string, contentType: string = 'image/jpeg'): Promise<string> {
+  const uploadParams = {
+    Bucket: BUCKET_NAME,
+    Key: fileName,
+    Body: file,
+    ContentType: contentType,
+    ACL: 'public-read' as const,
+  };
 
-// Generate signed URL for private object access
-export async function generateSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
   try {
-    const s3Client = createSpacesClient();
-    const bucket = process.env.DO_SPACES_BUCKET;
-    
-    if (!bucket) {
-      throw new Error('DO_SPACES_BUCKET not configured');
-    }
-
-    const command = new GetObjectCommand({
-      Bucket: bucket,
-      Key: key,
-    });
-
-    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
-    return signedUrl;
+    await spacesClient.send(new PutObjectCommand(uploadParams));
+    return `${process.env.DO_SPACES_ENDPOINT}/${BUCKET_NAME}/${fileName}`;
   } catch (error) {
-    console.error('❌ Error generating signed URL:', error);
+    console.error('Error uploading to DigitalOcean Spaces:', error);
     throw error;
   }
 }
 
-// Extract key from DigitalOcean Spaces URL
-export function extractKeyFromUrl(url: string): string {
-  const bucket = process.env.DO_SPACES_BUCKET;
-  const endpoint = process.env.DO_SPACES_ENDPOINT;
-  
-  if (!bucket || !endpoint) {
-    throw new Error('DigitalOcean Spaces configuration missing');
-  }
+export async function getSignedUploadUrl(fileName: string, contentType: string = 'image/jpeg'): Promise<string> {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: fileName,
+    ContentType: contentType,
+    ACL: 'public-read' as const,
+  });
 
-  // Handle both URL formats:
-  // https://fra1.digitaloceanspaces.com/bucket-name/path/to/file
-  // https://bucket-name.fra1.digitaloceanspaces.com/path/to/file
-  
-  if (url.includes(`/${bucket}/`)) {
-    // Format: https://fra1.digitaloceanspaces.com/bucket-name/path/to/file
-    return url.split(`/${bucket}/`)[1];
-  } else if (url.includes(`${bucket}.`)) {
-    // Format: https://bucket-name.fra1.digitaloceanspaces.com/path/to/file
-    const urlObj = new URL(url);
-    return urlObj.pathname.substring(1); // Remove leading slash
+  try {
+    const signedUrl = await getSignedUrl(spacesClient, command, { expiresIn: 3600 });
+    return signedUrl;
+  } catch (error) {
+    console.error('Error generating signed URL:', error);
+    throw error;
   }
-  
-  throw new Error(`Unable to extract key from URL: ${url}`);
 }
 
-// Generate signed URL from existing DigitalOcean Spaces URL
-export async function getSignedUrlFromSpacesUrl(url: string, expiresIn: number = 3600): Promise<string> {
+export async function getSignedDownloadUrl(fileName: string): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: fileName,
+  });
+
   try {
-    const key = extractKeyFromUrl(url);
-    return await generateSignedUrl(key, expiresIn);
+    const signedUrl = await getSignedUrl(spacesClient, command, { expiresIn: 3600 });
+    return signedUrl;
   } catch (error) {
-    console.error('❌ Error converting to signed URL:', error);
-    // Fallback to original URL if signing fails
-    return url;
+    console.error('Error generating signed download URL:', error);
+    throw error;
+  }
+}
+
+export async function getSignedUrlFromSpacesUrl(spacesUrl: string, expiresIn: number = 3600): Promise<string> {
+  try {
+    // Extract the file key from the Spaces URL
+    const url = new URL(spacesUrl);
+    const pathSegments = url.pathname.split('/');
+    // Remove the bucket name from the path
+    const fileName = pathSegments.slice(2).join('/');
+    
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: fileName,
+    });
+
+    const signedUrl = await getSignedUrl(spacesClient, command, { expiresIn });
+    return signedUrl;
+  } catch (error) {
+    console.error('Error generating signed URL from Spaces URL:', error);
+    throw error;
   }
 }

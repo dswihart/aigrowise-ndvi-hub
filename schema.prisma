@@ -26,7 +26,7 @@ model Image {
   mimeType         String?
   userId           String
   createdAt        DateTime @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime @updatedAt
   thumbnailUrl     String?
   optimizedUrl     String?
   originalFileName String?
@@ -40,10 +40,14 @@ model Image {
   compressionRatio Float?
   isProcessed      Boolean  @default(false)
   processingStatus String   @default("pending")
+  companyName      String?
+  location         String?
+  imageType        String   @default("NDVI")
   user             User     @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "Image_user_id_idx")
   @@index([processingStatus], map: "Image_processing_status_idx")
+  @@index([imageType], map: "Image_image_type_idx")
 }
 
 enum Role {

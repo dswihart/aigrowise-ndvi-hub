@@ -4,21 +4,23 @@ import { prisma } from "./index";
 export type CreateImageInput = {
   url: string;
   userId: string;
-  filename?: string;
-  title?: string;
-  description?: string;
+  fileName?: string;
   fileSize?: number;
   mimeType?: string;
+  companyName?: string;
+  location?: string;
+  imageType?: string;
 };
 
 export type UpdateImageInput = {
   id: string;
   url?: string;
-  filename?: string;
-  title?: string;
-  description?: string;
+  fileName?: string;
   fileSize?: number;
   mimeType?: string;
+  companyName?: string;
+  location?: string;
+  imageType?: string;
 };
 
 export async function createImage(input: CreateImageInput): Promise<Image> {
@@ -26,11 +28,12 @@ export async function createImage(input: CreateImageInput): Promise<Image> {
     data: {
       url: input.url,
       userId: input.userId,
-      filename: input.filename,
-      title: input.title,
-      description: input.description,
+      fileName: input.fileName,
       fileSize: input.fileSize,
       mimeType: input.mimeType,
+      companyName: input.companyName,
+      location: input.location,
+      imageType: input.imageType || "NDVI",
     },
   });
   return created;

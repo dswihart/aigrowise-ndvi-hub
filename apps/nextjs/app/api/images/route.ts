@@ -4,8 +4,8 @@ import { authOptions } from "../../../lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
-import { createImage, listImagesByUser } from "@bmad-aigrowise/db";
-import { uploadToSpaces, getStorageConfig } from "../../../lib/storage/spaces";
+import { createImage, listImagesByUser, listAllImages } from "@bmad-aigrowise/db";
+
 
 // Configure upload directory for local storage fallback
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
@@ -86,12 +86,12 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     let imageUrl: string;
-    const storageConfig = getStorageConfig();
+    
 
-    if (storageConfig.useSpaces) {
+    if (false) { // Spaces disabled
       // Upload to DigitalOcean Spaces
       try {
-        imageUrl = await uploadToSpaces(buffer, fileName, file.type);
+        
         console.log('Image uploaded to Spaces:', imageUrl);
       } catch (error) {
         console.error('Spaces upload failed, falling back to local storage:', error);
@@ -114,8 +114,7 @@ export async function POST(request: NextRequest) {
     const image = await createImage({
       url: imageUrl,
       userId: clientId,
-      filename: fileName,
-      title: file.name,
+      fileName: fileName,
       fileSize: file.size,
       mimeType: file.type,
     });
@@ -162,11 +161,15 @@ export async function GET(request: NextRequest) {
       // Admin can see all images or filter by client
       if (clientId) {
         images = await listImagesByUser(clientId, {
-          orderBy: { createdAt: "desc" }
+          orderBy: { createdAt: "desc" },
+          include: { user: true }
         });
       } else {
-        // For admin without clientId, return empty array for now
-        images = [];
+        // Admin requesting all images - use listAllImages
+        images = await listAllImages({
+          orderBy: { createdAt: "desc" },
+          include: { user: true }
+        });
       }
     } else {
       // Regular user can only see their own images
@@ -180,10 +183,14 @@ export async function GET(request: NextRequest) {
         id: img.id,
         url: img.url,
         fileName: img.fileName,
-        title: img.title,
+        originalFileName: img.originalFileName,
+        title: "Untitled",
         fileSize: img.fileSize,
         mimeType: img.mimeType,
-        createdAt: img.createdAt.toISOString()
+        createdAt: img.createdAt.toISOString(),
+        user: img.user ? {
+          email: img.user.email
+        } : null
       }))
     });
 
