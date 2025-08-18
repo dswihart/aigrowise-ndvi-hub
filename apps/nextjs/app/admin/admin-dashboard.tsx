@@ -342,6 +342,7 @@ export default function AdminDashboard({ session }: { session: any }) {
     }
   };
 
+  // Chunked upload function disabled - regular upload works for large files
   const uploadSingleFile = async (fileProgress: UploadProgress, index: number): Promise<void> => {
     const formData = new FormData();
     formData.append('file', fileProgress.file);
@@ -359,7 +360,9 @@ export default function AdminDashboard({ session }: { session: any }) {
         }
       });
 
+console.log("📡 XHR request started...");
       xhr.addEventListener('load', () => {
+console.log("✅ XHR load event - Status:", xhr.status, "Response:", xhr.responseText.substring(0, 200));
         if (xhr.status === 200) {
           setUploadFiles(prev => prev.map((item, i) => 
             i === index ? { ...item, status: 'completed', progress: 100 } : item
@@ -374,15 +377,12 @@ export default function AdminDashboard({ session }: { session: any }) {
       });
 
       xhr.addEventListener('error', () => {
+console.error("❌ XHR error event");
         setUploadFiles(prev => prev.map((item, i) => 
           i === index ? { ...item, status: 'error', error: 'Network error' } : item
         ));
         reject(new Error('Network error'));
       });
-
-      setUploadFiles(prev => prev.map((item, i) => 
-        i === index ? { ...item, status: 'uploading' } : item
-      ));
 
       xhr.open('POST', '/api/images');
       xhr.send(formData);
@@ -392,6 +392,7 @@ export default function AdminDashboard({ session }: { session: any }) {
   const handleUploadAll = async () => {
     if (!selectedClientId) {
       alert('Please select a client first');
+      return;
       return;
     }
 
@@ -1018,12 +1019,22 @@ export default function AdminDashboard({ session }: { session: any }) {
                   <div key={image.id} className={`rounded-lg shadow overflow-hidden transition-colors duration-300 ${
                     isDarkMode ? 'bg-gray-800' : 'bg-white'
                   }`}>
-                    <img
-                      src={image.url}
-                      alt={image.originalFileName || image.fileName || "NDVI Image"}
-                      className="w-full h-48 object-cover cursor-pointer"
-                      onClick={() => setSelectedImage(image)}
-                    />
+                    {(image.originalFileName || image.fileName || "").toLowerCase().includes(".tif") ? (
+                      <div className="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer" onClick={() => setSelectedImage(image)}>
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">📷</div>
+                          <div className="text-sm text-gray-600">TIF Image</div>
+                          <div className="text-xs text-gray-500">{((image.fileSize || 0) / 1024 / 1024).toFixed(1)} MB</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <img
+                        src={image.url}
+                        alt={image.originalFileName || image.fileName || "NDVI Image"}
+                        className="w-full h-48 object-cover cursor-pointer"
+                        onClick={() => setSelectedImage(image)}
+                      />
+                    )}
                     <div className="p-4">
                       <h3 className={`font-semibold mb-2 truncate transition-colors duration-300 ${
                         isDarkMode ? 'text-gray-100' : 'text-gray-900'
@@ -1059,12 +1070,22 @@ export default function AdminDashboard({ session }: { session: any }) {
                   <div key={image.id} className={`rounded-lg shadow overflow-hidden transition-colors duration-300 ${
                     isDarkMode ? 'bg-gray-800' : 'bg-white'
                   }`}>
-                    <img
-                      src={image.url}
-                      alt={image.originalFileName || image.fileName || "NDVI Image"}
-                      className="w-full h-48 object-cover cursor-pointer"
-                      onClick={() => setSelectedImage(image)}
-                    />
+                    {(image.originalFileName || image.fileName || "").toLowerCase().includes(".tif") ? (
+                      <div className="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer" onClick={() => setSelectedImage(image)}>
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">📷</div>
+                          <div className="text-sm text-gray-600">TIF Image</div>
+                          <div className="text-xs text-gray-500">{((image.fileSize || 0) / 1024 / 1024).toFixed(1)} MB</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <img
+                        src={image.url}
+                        alt={image.originalFileName || image.fileName || "NDVI Image"}
+                        className="w-full h-48 object-cover cursor-pointer"
+                        onClick={() => setSelectedImage(image)}
+                      />
+                    )}
                     <div className="p-4">
                       <h3 className={`font-semibold mb-2 truncate transition-colors duration-300 ${
                         isDarkMode ? 'text-gray-100' : 'text-gray-900'
